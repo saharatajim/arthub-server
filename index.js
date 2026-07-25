@@ -34,6 +34,7 @@ async function server() {
 
     const db = client.db("arthub") 
     const organizationCollection = db.collection("artist-organization")
+    const artworkCollection = db.collection("artist-artwork")
 
 //ARTIST ORGANIZATION
 
@@ -73,7 +74,26 @@ app.patch("/organization", async (req, res) => {
     res.status(500).send({ message: "Server error" });
   }
 });
+//ARTIST-ARTWORK
+//READ
+   app.get("/artwork", async(req,res)=>{
+            const { artistMail, companyId } = req.query;
+            let query = {};
 
+  if (artistMail) query.artistMail = artistMail;
+  if (companyId) query.companyId = companyId;
+
+       const result = await artworkCollection.find(query).toArray();
+         res.send(result);
+})
+//CREATE
+      app.post("/artwork", async(req,res)=>{
+      const artwork = req.body 
+      const result = await artworkCollection.insertOne(artwork) 
+      
+      res.send(result)
+       })
+       
 
     console.log("✅ You are connected to MongoDB!");
   } finally {
