@@ -93,6 +93,25 @@ app.patch("/organization", async (req, res) => {
       
       res.send(result)
        })
+//individual
+app.get("/artwork/:id", async(req,res)=>{
+  const query = {_id:new ObjectId(req.params.id)} 
+  const result = await artworkCollection.findOne(query) 
+  res.send(result)
+})
+app.delete("/artwork/:id", async(req,res)=>{
+  const query = {_id:new ObjectId(req.params.id)} 
+  const result = await artworkCollection.deleteOne(query) 
+    res.send(result)
+})
+app.patch("/artwork/:id", async(req,res)=>{
+  const query = {_id:new ObjectId(req.params.id)} 
+  const updatedDoc = {$set:req.body} 
+  const result = await artworkCollection.updateOne(query,updatedDoc) 
+  res.send(result) })
+
+
+
        
 
     console.log("✅ You are connected to MongoDB!");
