@@ -3,12 +3,12 @@ dns.setServers(["8.8.8.8", "8.8.4.4"]);
 
 require('dotenv').config()   
 const express = require('express') 
-const app = express()              
-const port = 5000    
-
 const cors=require("cors") 
+const app = express()              
 app.use(cors())   
 app.use(express.json()) 
+const port = 5000    
+
 app.get('/', (req, res) => {
   res.send('Hello World! Server is running successfully 🚀')
 })
@@ -35,6 +35,7 @@ async function server() {
     const db = client.db("arthub") 
     const organizationCollection = db.collection("artist-organization")
     const artworkCollection = db.collection("artist-artwork")
+    const purchaseCollection = db.collection("purchases")
 
 //ARTIST ORGANIZATION
 
@@ -74,6 +75,7 @@ app.patch("/organization", async (req, res) => {
     res.status(500).send({ message: "Server error" });
   }
 });
+
 //ARTIST-ARTWORK
 //READ
    app.get("/artwork", async(req,res)=>{
@@ -88,10 +90,10 @@ app.patch("/organization", async (req, res) => {
 })
 //CREATE
       app.post("/artwork", async(req,res)=>{
-      const artwork = req.body 
-      const result = await artworkCollection.insertOne(artwork) 
+      const artworkData = req.body 
+      const result = await artworkCollection.insertOne(artworkData) 
       
-      res.send(result)
+      res.json(result)
        })
 //individual
 app.get("/artwork/:id", async(req,res)=>{
@@ -110,6 +112,35 @@ app.patch("/artwork/:id", async(req,res)=>{
   const result = await artworkCollection.updateOne(query,updatedDoc) 
   res.send(result) })
 
+  
+//PAyment
+
+app.post("/artwork/purchases",async(req,res)=>{
+   try {
+    const { productId, buyerMail, sellerMail, title, price } = req.body;
+
+    // 1. Save purchase
+    const purchaseData = {
+      productId,
+      buyerMail,
+      sellerMail,
+      title,
+      price,
+      createdAt: new Date().toISOString(),
+    };
+    await purchaseCollection.insertOne(purchaseData);
+
+    // 2. Update artwork quantity
+    const query = { _id: new ObjectId(productId) };
+    const updateDoc = { $inc: { quantity: -1 } }; // decrease by 1
+    await artworkCollection.updateOne(query, updateDoc);
+
+    res.json({ message: "Purchase saved and artwork quantity updated" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ message: "Server error" });
+  }
+})
 
 
        
