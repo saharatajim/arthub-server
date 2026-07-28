@@ -169,10 +169,15 @@ app.get("/purchases", async (req, res) => {
 
 
 app.post("/pre-sub", async (req, res)=>{
-  const {user,session_id}=req.body
+  const {title, price,user,session_id,createdAt,customerName,customerEmail}=req.body
+
+  const isExist=await subCollection.findOne({session_id})
+  if(isExist){
+    return res.status(400).send({message:"Session already exist"})
+  }
 
  const subRes= await subCollection.insertOne({userId:new ObjectId(user.id),
-  session_id})
+  session_id,title, price,createdAt,customerName,customerEmail})
 
 
  const userRes=await userCollection.updateOne(
@@ -190,3 +195,9 @@ res.send({subRes,userRes})
   }
 }
 server().catch(console.dir);
+
+  //  session_id,
+  //  user,
+  // price: session.amount_total/100,
+  // title: session?.metadata?.title,
+  // createdAt: new Date().toISOString(),
