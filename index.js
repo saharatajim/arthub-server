@@ -36,6 +36,8 @@ async function server() {
     const organizationCollection = db.collection("artist-organization")
     const artworkCollection = db.collection("artist-artwork")
     const purchaseCollection = db.collection("purchases")
+    const subCollection = db.collection("subscription")
+    const userCollection = db.collection("user")
 
 //ARTIST ORGANIZATION
 
@@ -112,15 +114,16 @@ app.patch("/artwork/:id", async(req,res)=>{
   const result = await artworkCollection.updateOne(query,updatedDoc) 
   res.send(result) })
 
-  
+
 //PAyment
 
 app.post("/artwork/purchases",async(req,res)=>{
    try {
-    const { productId, buyerMail, sellerMail, title, price } = req.body;
+    const { productId, buyerMail, sellerMail, title, price,image } = req.body;
 
-    // 1. Save purchase
+   
     const purchaseData = {
+      image,
       productId,
       buyerMail,
       sellerMail,
@@ -130,9 +133,9 @@ app.post("/artwork/purchases",async(req,res)=>{
     };
     await purchaseCollection.insertOne(purchaseData);
 
-    // 2. Update artwork quantity
+    
     const query = { _id: new ObjectId(productId) };
-    const updateDoc = { $inc: { quantity: -1 } }; // decrease by 1
+    const updateDoc = { $inc: { quantity: -1 } }; // 
     await artworkCollection.updateOne(query, updateDoc);
 
     res.json({ message: "Purchase saved and artwork quantity updated" });
@@ -141,7 +144,43 @@ app.post("/artwork/purchases",async(req,res)=>{
     res.status(500).send({ message: "Server error" });
   }
 })
+app.get("/purchases", async (req, res) => {
+  try {
+    const { buyerMail, sellerMail } = req.query;
+    let query = {};
 
+    // Filter by buyer or seller if provided
+    if (buyerMail) {
+      query.buyerMail = buyerMail;
+    }
+    if (sellerMail) {
+      query.sellerMail = sellerMail;
+    }
+
+    // Fetch purchases
+    const result = await purchaseCollection.find(query).toArray();
+
+    res.json(result);
+  } catch (error) {
+    console.error("❌ Error fetching purchases:", error);
+    res.status(500).send({ message: "Server error" });
+  }
+});
+
+
+app.post("/pre-sub", async (req, res)=>{
+  const {user,session_id}=req.body
+
+ const subRes= await subCollection.insertOne({userId:new ObjectId(user.id),
+  session_id})
+
+
+ const userRes=await userCollection.updateOne(
+  {_id:new ObjectId(user.id)},
+  {$set:{subscriptionPlan:"Premium"}}
+)
+res.send({subRes,userRes})
+})
 
        
 
