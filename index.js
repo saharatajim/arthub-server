@@ -227,7 +227,34 @@ app.get("/pro-sub", async (req, res) => {
     res.status(500).send({ message: err.message });
   }
 });
+//Get user
+app.get("/users", async (req, res) => {
+  try {
+    const subs = await userCollection.find().toArray();
+    res.send(subs);
+  } catch (err) {
+    res.status(500).send({ message: err.message });
+  }
+});
+app.patch("/users/:id", async (req, res) => {
+  const userId = req.params.id;
+  const { role } = req.body;
 
+  try {
+    const result = await userCollection.updateOne(
+      { _id: new ObjectId(userId) },
+      { $set: { role: role } }
+    );
+
+    if (result.modifiedCount === 1) {
+      res.send({ success: true, message: "Role updated successfully" });
+    } else {
+      res.status(404).send({ success: false, message: "User not found" });
+    }
+  } catch (err) {
+    res.status(500).send({ success: false, message: err.message });
+  }
+});
        
 
     console.log("✅ You are connected to MongoDB!");
