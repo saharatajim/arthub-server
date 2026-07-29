@@ -80,16 +80,62 @@ app.patch("/organization", async (req, res) => {
 
 //ARTIST-ARTWORK
 //READ
-   app.get("/artwork", async(req,res)=>{
-            const { artistMail, companyId } = req.query;
-            let query = {};
+//    app.get("/artwork", async(req,res)=>{
+//             const { artistMail, companyId } = req.query;
+//             let query = {};
 
+//   if (artistMail) query.artistMail = artistMail;
+//   if (companyId) query.companyId = companyId;
+
+//        const result = await artworkCollection.find(query).toArray();
+//          res.send(result);
+// })
+
+app.get("/artwork", async (req, res) => {
+  const { artistMail, companyId, search, category, minPrice, maxPrice, sort } = req.query;
+  let query = {};
+
+  // Artist filter
   if (artistMail) query.artistMail = artistMail;
   if (companyId) query.companyId = companyId;
 
-       const result = await artworkCollection.find(query).toArray();
-         res.send(result);
-})
+  // Category filter
+  if (category) {
+    query.category = category;
+  }
+
+  // Search filter (title or artistMail)
+  if (search) {
+    query.$or = [
+      { title: { $regex: search, $options: "i" } },
+      { artistMail: { $regex: search, $options: "i" } }
+    ];
+  }
+
+  // Price filter
+  if (minPrice || maxPrice) {
+    query.price = {};
+    if (minPrice) query.price.$gte = parseInt(minPrice);
+    if (maxPrice) query.price.$lte = parseInt(maxPrice);
+  }
+
+  // Fetch data
+  let result = await artworkCollection.find(query).toArray();
+
+  // Sorting
+  if (sort) {
+    if (sort === "low-high") {
+      result.sort((a, b) => a.price - b.price);
+    } else if (sort === "high-low") {
+      result.sort((a, b) => b.price - a.price);
+    } else if (sort === "newest") {
+      result.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    }
+  }
+
+  res.send(result);
+});
+
 //CREATE
       app.post("/artwork", async(req,res)=>{
       const artworkData = req.body 
