@@ -250,7 +250,7 @@ app.post("/pro-sub", async (req, res)=>{
 
  const userRes=await userCollection.updateOne(
   {_id:new ObjectId(user.id)},
-  {$set:{subscriptionPlan:"{Pro"}}
+  {$set:{subscriptionPlan:"Pro"}}
 )
 res.send({subRes,userRes})
 })
