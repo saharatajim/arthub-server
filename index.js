@@ -119,17 +119,21 @@ app.patch("/artwork/:id", async(req,res)=>{
 
 app.post("/artwork/purchases",async(req,res)=>{
    try {
-    const { productId, buyerMail, sellerMail, title, price,image } = req.body;
+    const { productId, buyerMail, sellerMail, title, price,image,trxId } = req.body;
 
-   
+     const isExistSession = await purchaseCollection.findOne({trxId });
+      if (isExistSession) {
+        return res.status(400).send({ message: "Session already exist" });
+      }
     const purchaseData = {
+     
       image,
       productId,
       buyerMail,
       sellerMail,
       title,
       price,
-      createdAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),trxId
     };
     await purchaseCollection.insertOne(purchaseData);
 
@@ -169,7 +173,7 @@ app.get("/purchases", async (req, res) => {
 
 
 app.post("/pre-sub", async (req, res)=>{
-  const {title, price,user,session_id,createdAt,customerName,customerEmail}=req.body
+  const {title, price,user,session_id,createdAt,customerName,customerEmail,trxId}=req.body
 
   const isExist=await subCollection.findOne({session_id})
   if(isExist){
@@ -177,7 +181,7 @@ app.post("/pre-sub", async (req, res)=>{
   }
 
  const subRes= await subCollection.insertOne({userId:new ObjectId(user.id),
-  session_id,title, price,createdAt,customerName,customerEmail})
+  session_id,title, price,createdAt,customerName,customerEmail,trxId})
 
 
  const userRes=await userCollection.updateOne(
@@ -187,7 +191,7 @@ app.post("/pre-sub", async (req, res)=>{
 res.send({subRes,userRes})
 })
 app.post("/pro-sub", async (req, res)=>{
-  const {title, price,user,session_id,createdAt,customerName,customerEmail}=req.body
+  const {title, price,user,session_id,createdAt,customerName,customerEmail,trxId}=req.body
 
   const isExist=await subCollection.findOne({session_id})
   if(isExist){
@@ -195,7 +199,7 @@ app.post("/pro-sub", async (req, res)=>{
   }
 
  const subRes= await subCollection.insertOne({userId:new ObjectId(user.id),
-  session_id,title, price,createdAt,customerName,customerEmail})
+  session_id,title, price,createdAt,customerName,customerEmail,trxId})
 
 
  const userRes=await userCollection.updateOne(
@@ -204,6 +208,25 @@ app.post("/pro-sub", async (req, res)=>{
 )
 res.send({subRes,userRes})
 })
+// Get all Premium subscriptions
+app.get("/pre-sub", async (req, res) => {
+  try {
+    const subs = await subCollection.find({ title: "Premium" }).toArray();
+    res.send(subs);
+  } catch (err) {
+    res.status(500).send({ message: err.message });
+  }
+});
+
+// Get all Pro subscriptions
+app.get("/pro-sub", async (req, res) => {
+  try {
+    const subs = await subCollection.find({ title: "Pro" }).toArray();
+    res.send(subs);
+  } catch (err) {
+    res.status(500).send({ message: err.message });
+  }
+});
 
        
 
