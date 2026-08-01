@@ -81,6 +81,21 @@ app.patch("/organization", async (req, res) => {
 //ARTIST-ARTWORK
 //READ
 
+// Latest artworks API
+app.get("/latest-artworks", async (req, res) => {
+  try {
+    const data = await artworkCollection
+      .find({})
+      .sort({ createdAt: -1 })   
+      .limit(6)                 
+      .toArray();
+
+    res.json(data);
+  } catch (err) {
+    console.error("Error in latest-artworks route:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 app.get("/artwork", async (req, res) => {
   const { artistMail, companyId, search, category, minPrice, maxPrice, sort } = req.query;
@@ -412,7 +427,7 @@ const data = await purchaseCollection.aggregate([
     res.status(500).json({ error: err.message });
   }
 });
-// Category-wise artworks count
+
 app.get("/analytics/artworks-by-category", async (req, res) => {
   try {
     const data = await artworkCollection.aggregate([
@@ -431,6 +446,49 @@ app.get("/analytics/artworks-by-category", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+
+
+app.get("/analytics/top-artists", async (req, res) => {
+  try {
+    const data = await purchaseCollection.aggregate([
+      {
+        $group: {
+          _id: "$sellerMail",
+          salesCount: { $sum: 1 },
+          totalRevenue: { $sum: { $toInt: "$price" } }
+        }
+      },
+      { $sort: { salesCount: -1 } },
+      { $limit: 3 },
+      {
+        $lookup: {
+          from: "user",          // আসল collection নাম ব্যবহার করো
+          localField: "_id",     // group এর পর sellerMail এখন _id তে আছে
+          foreignField: "email", // user collection এ email এর সাথে match করবে
+          as: "artistInfo"
+        }
+      },
+      { $unwind: "$artistInfo" },
+      {
+        $project: {
+          _id: 0,
+          name: "$artistInfo.name",
+          email: "$artistInfo.email",
+          image: "$artistInfo.image",
+          salesCount: 1,
+          totalRevenue: 1
+        }
+      }
+    ]).toArray();
+
+    res.json(data);
+  } catch (err) {
+    console.error("Error in top-artists route:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 
 
