@@ -80,16 +80,7 @@ app.patch("/organization", async (req, res) => {
 
 //ARTIST-ARTWORK
 //READ
-//    app.get("/artwork", async(req,res)=>{
-//             const { artistMail, companyId } = req.query;
-//             let query = {};
 
-//   if (artistMail) query.artistMail = artistMail;
-//   if (companyId) query.companyId = companyId;
-
-//        const result = await artworkCollection.find(query).toArray();
-//          res.send(result);
-// })
 
 app.get("/artwork", async (req, res) => {
   const { artistMail, companyId, search, category, minPrice, maxPrice, sort } = req.query;
@@ -134,6 +125,66 @@ app.get("/artwork", async (req, res) => {
   }
 
   res.send(result);
+});
+//for
+app.get("/artwork/public", async (req, res) => {
+  const {search, category, minPrice, maxPrice, sort, limit, page } = req.query;
+  let query = {};
+
+
+  // Category filter
+  if (category) query.category = category;
+
+  // Search filter (title or artistMail)
+  if (search) {
+    query.$or = [
+      { title: { $regex: search, $options: "i" } },
+      { artistMail: { $regex: search, $options: "i" } }
+    ];
+  }
+
+  // Price filter
+  if (minPrice || maxPrice) {
+    query.price = {};
+    if (minPrice) query.price.$gte = parseInt(minPrice);
+    if (maxPrice) query.price.$lte = parseInt(maxPrice);
+  }
+
+  // Pagination setup
+  const perPage = Number(limit) || 2;
+  const currentPage = Number(page) || 1;
+  const skip = (currentPage - 1) * perPage;
+
+  // Sorting setup
+  let sortOption = {};
+  if (sort) {
+    if (sort === "low-high") {
+      sortOption.price = 1;
+    } else if (sort === "high-low") {
+      sortOption.price = -1;
+    } else if (sort === "newest") {
+      sortOption.createdAt = -1;
+    }
+  }
+
+  // Fetch data with filters, pagination, and sorting
+  const totalData = await artworkCollection.countDocuments(query);
+  const totalPages = Math.ceil(totalData / perPage);
+
+  const result = await artworkCollection
+    .find(query)
+    .sort(sortOption)
+    .skip(skip)
+    .limit(perPage)
+    .toArray();
+
+  res.send({
+    totalPages,
+    currentPage,
+    perPage,
+    totalData,
+    result
+  });
 });
 
 //CREATE
