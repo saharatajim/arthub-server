@@ -352,7 +352,87 @@ app.patch("/users/:id", async (req, res) => {
     res.status(500).send({ success: false, message: err.message });
   }
 });
-       
+  
+
+//Mongodb Agregation
+
+app.get("/analytics/overview", async (req, res) => {
+  try {
+    const totalUsers = await userCollection.countDocuments({ role: "Buyer" });
+    const totalArtists = await userCollection.countDocuments({ role: "Artist" });
+    const totalArtworksSold = await purchaseCollection.countDocuments({});
+    const revenueAgg = await purchaseCollection.aggregate([
+      { $group: { _id: null, totalRevenue: { $sum: { $toInt: "$price" } } } }
+    ]).toArray();
+
+    res.json({
+      totalUsers,
+      totalArtists,
+      totalArtworksSold,
+      totalRevenue: revenueAgg[0]?.totalRevenue || 0
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+app.get("/analytics/sales-chart", async (req, res) => {
+  try {
+const data = await purchaseCollection.aggregate([
+  {
+    $addFields: {
+      createdAtDate: {
+        $convert: {
+          input: "$createdAt",
+          to: "date",
+          onError: null,
+          onNull: null
+        }
+      }
+    }
+  },
+  {
+    $match: { createdAtDate: { $ne: null } }
+  },
+  {
+    $group: {
+      _id: {
+        year: { $year: "$createdAtDate" },
+        month: { $month: "$createdAtDate" }
+      },
+      monthlyRevenue: { $sum: { $toInt: "$price" } },
+      artworksSold: { $sum: 1 }
+    }
+  },
+  { $sort: { "_id.year": 1, "_id.month": 1 } }
+]).toArray();
+
+
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+// Category-wise artworks count
+app.get("/analytics/artworks-by-category", async (req, res) => {
+  try {
+    const data = await artworkCollection.aggregate([
+      {
+        $group: {
+          _id: "$category",
+          count: { $sum: 1 },          // কতগুলো artwork আছে
+          totalQuantity: { $sum: "$quantity" } // মোট quantity
+        }
+      },
+      { $sort: { count: -1 } }
+    ]).toArray();
+
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 
     console.log("✅ You are connected to MongoDB!");
   } finally {
