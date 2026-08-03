@@ -65,6 +65,7 @@ async function server() {
     const purchaseCollection = db.collection("purchases")
     const subCollection = db.collection("subscription")
     const userCollection = db.collection("user")
+    const commentCollection=db.collection("comments")
 
 //ARTIST ORGANIZATION
 
@@ -521,7 +522,36 @@ app.get("/analytics/top-artists", async (req, res) => {
   }
 });
 
+//comments
+  // ✅ Add Comment
+app.post("/artwork/:id/comments", async (req, res) => {
+  try {
+    const artworkId = req.params.id;
+    const commentData = {
+      ...req.body,
+      artId: artworkId,
+      createdAt: new Date(),
+    };
 
+    const result = await commentCollection.insertOne(commentData);
+    res.status(201).json({ success: true, data: result });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ✅ Get Comments for an Artwork
+app.get("/artwork/:id/comments", async (req, res) => {
+  try {
+    const artworkId = req.params.id;
+    const query = { artId: artworkId }; // ✅ artworkId দিয়ে খোঁজা হবে
+    const result = await commentCollection.find(query).toArray();
+
+    res.json({ success: true, comments: result });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
 
 
     console.log("✅ You are connected to MongoDB!");
