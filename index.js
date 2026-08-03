@@ -7,6 +7,7 @@ const cors=require("cors")
 const app = express()              
 app.use(cors())   
 app.use(express.json()) 
+const { createRemoteJWKSet, jwtVerify } = require("jose-cjs");
 const port = process.env.PORT   
 
 app.get('/', (req, res) => {
@@ -18,6 +19,7 @@ app.listen(port, () => {
 })
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+
 const uri = process.env.MONGODB_URL 
 
 const client = new MongoClient(uri, {
@@ -27,6 +29,31 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   }
 });
+
+const JWKS=createRemoteJWKSet(
+  new URL(`${process.env.CLIENT_URL}/api/auth/jwks`)
+)
+
+const middleware=async(req,res,next)=>{
+const authHeader=req?.headers?.authorization
+if(!authHeader){
+  return res.status(401).json({message:"Unauthorized"})
+}
+const token=authHeader.split(" ")[1]
+if(!token){
+  return res.status(401).json({message:"Unauthorized"})
+}
+console.log(token,"token");
+try{
+const {payload}=await jwtVerify(token,JWKS)
+console.log(payload,"payload");
+next()
+}catch(error){
+   return res.status(403).json({message:"Unauthorized"})
+}
+
+
+}
 
 
 async function server() {
@@ -203,24 +230,29 @@ app.get("/artwork/public", async (req, res) => {
 });
 
 //CREATE
-      app.post("/artwork", async(req,res)=>{
+
+//protected
+      app.post("/artwork",middleware, async(req,res)=>{
       const artworkData = req.body 
       const result = await artworkCollection.insertOne(artworkData) 
       
       res.json(result)
        })
 //individual
-app.get("/artwork/:id", async(req,res)=>{
+
+app.get("/artwork/:id",async(req,res)=>{
   const query = {_id:new ObjectId(req.params.id)} 
   const result = await artworkCollection.findOne(query) 
   res.send(result)
 })
-app.delete("/artwork/:id", async(req,res)=>{
+//protected
+app.delete("/artwork/:id",middleware, async(req,res)=>{
   const query = {_id:new ObjectId(req.params.id)} 
   const result = await artworkCollection.deleteOne(query) 
     res.send(result)
 })
-app.patch("/artwork/:id", async(req,res)=>{
+//protected
+app.patch("/artwork/:id", middleware,async(req,res)=>{
   const query = {_id:new ObjectId(req.params.id)} 
   const updatedDoc = {$set:req.body} 
   const result = await artworkCollection.updateOne(query,updatedDoc) 
@@ -434,8 +466,8 @@ app.get("/analytics/artworks-by-category", async (req, res) => {
       {
         $group: {
           _id: "$category",
-          count: { $sum: 1 },          // কতগুলো artwork আছে
-          totalQuantity: { $sum: "$quantity" } // মোট quantity
+          count: { $sum: 1 },          
+          totalQuantity: { $sum: "$quantity" } 
         }
       },
       { $sort: { count: -1 } }
@@ -463,9 +495,9 @@ app.get("/analytics/top-artists", async (req, res) => {
       { $limit: 3 },
       {
         $lookup: {
-          from: "user",          // আসল collection নাম ব্যবহার করো
-          localField: "_id",     // group এর পর sellerMail এখন _id তে আছে
-          foreignField: "email", // user collection এ email এর সাথে match করবে
+          from: "user",         
+          localField: "_id",   
+          foreignField: "email", 
           as: "artistInfo"
         }
       },
