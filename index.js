@@ -523,7 +523,7 @@ app.get("/analytics/top-artists", async (req, res) => {
 });
 
 //comments
-  // ✅ Add Comment
+  //  Add Comment
 app.post("/artwork/:id/comments", async (req, res) => {
   try {
     const artworkId = req.params.id;
@@ -540,7 +540,7 @@ app.post("/artwork/:id/comments", async (req, res) => {
   }
 });
 
-// ✅ Get Comments for an Artwork
+//  Get Comments for an Artwork
 app.get("/artwork/:id/comments", async (req, res) => {
   try {
     const artworkId = req.params.id;
@@ -553,8 +553,43 @@ app.get("/artwork/:id/comments", async (req, res) => {
   }
 });
 
+//  Delete a Comment by ID
+app.delete("/artwork/:artId/comments/:commentId", async (req, res) => {
+  try {
+    const { commentId } = req.params;
 
-    console.log("✅ You are connected to MongoDB!");
+    const result = await commentCollection.deleteOne({ _id: new ObjectId(commentId) });
+
+    if (result.deletedCount === 1) {
+      res.json({ success: true, message: "Comment deleted successfully" });
+    } else {
+      res.status(404).json({ success: false, message: "Comment not found" });
+    }
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+//Update a Comment by ID
+app.patch("/artwork/:artId/comments/:commentId", async (req, res) => {
+  try {
+    const { commentId } = req.params;
+    const updatedData = req.body; // client থেকে আসা নতুন data
+
+    const result = await commentCollection.updateOne(
+      { _id: new ObjectId(commentId) },
+      { $set: { ...updatedData, updatedAt: new Date() } } // ✅ নতুন data + updatedAt যোগ করা হলো
+    );
+
+    if (result.modifiedCount === 1) {
+      res.json({ success: true, message: "Comment updated successfully" });
+    } else {
+      res.status(404).json({ success: false, message: "Comment not found or no changes made" });
+    }
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+    console.log(" You are connected to MongoDB!");
   } finally {
 
   }
